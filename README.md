@@ -38,14 +38,12 @@ CNN Model 2 outperforms the ANN baseline by **13 percentage points** by learning
 
 ```
 svhn-digit-recognition/
-├── SVHN_Digit_Recognition.ipynb  ← Full training notebook
+├── SVHN_Street_Digit.ipynb
 ├── README.md
-├── DEPLOYMENT_GUIDE.md                     ← AWS + GitHub setup
-└── app/
-    ├── app.py                              ← Flask API
-    ├── requirements.txt
-    └── templates/
-        └── index.html                      ← Web UI (drag & drop)
+├── app.py
+├── requirements.txt
+└── templates/
+    └── index.html
 ```
 
 ---
