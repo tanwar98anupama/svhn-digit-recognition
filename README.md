@@ -24,6 +24,36 @@ CNN Model 2 outperforms the ANN baseline by **13 percentage points** by learning
 
 ---
 
+## Model Architecture
+The final model (`CNN Model 2`) utilizes a sequential convolutional neural network design optimized to handle the variance in lighting, blur, and distortion present in real-world street digit images.
+
+### Layer Breakdown
+* **Input Layer:** $32 \times 32 \times 3$ RGB images.
+* **Convolutional Block 1:**
+  * 2× `Conv2D` layers (32 filters, $3 \times 3$ kernel) to capture low-level features like edges and orientations.
+  * `LeakyReLU(alpha=0.1)` activation to prevent dying neurons and retain negative gradient information.
+  * `BatchNormalization` to stabilize activations and accelerate training convergence.
+  * `MaxPooling2D` ($2 \times 2$) to reduce spatial dimensions and introduce translation invariance.
+  * `Dropout(0.25)` to prevent early overfitting.
+* **Convolutional Block 2:**
+  * 2× `Conv2D` layers (64 filters, $3 \times 3$ kernel) to learn high-level spatial combinations (curves, shapes, digit contours).
+  * `LeakyReLU(alpha=0.1)` activation for robust non-linear feature mapping.
+  * `BatchNormalization` to ensure stable gradient flow through deeper layers.
+  * `MaxPooling2D` ($2 \times 2$) to compress representation.
+  * `Dropout(0.3)` to regularize feature extraction.
+* **Classification Head:**
+  * `Flatten` layer to convert 2D feature maps into a 1D feature vector.
+  * `Dense` layer (128 units) with `LeakyReLU(alpha=0.1)` for multi-feature interaction.
+  * `Dropout(0.5)` for aggressive regularization before classification.
+  * `Dense` output layer (10 units, `Softmax` activation) yielding a probability distribution across digits $0\text{–}9$.
+
+### Optimization & Training Parameters
+* **Loss Function:** Categorical Cross-Entropy
+* **Optimizer:** Adam Optimizer
+* **Regularization:** Combined Batch Normalization, LeakyReLU, and layered Dropout ($25\%\text{–}50\%$)
+
+---
+
 ## 🧠 Key Concepts
 
 - **Why CNNs beat ANNs on images** — flattening destroys spatial relationships
