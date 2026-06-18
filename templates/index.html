@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SVHN Digit Recognizer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e6f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      margin-top: 8px;
+      color: #9894b8;
+      font-size: 0.95rem;
+    }
+    header .badge {
+      display: inline-block;
+      margin-top: 10px;
+      background: #1e1b2e;
+      border: 1px solid #3d3860;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.78rem;
+      color: #a78bfa;
+    }
+
+    .card {
+      background: #1a1726;
+      border: 1px solid #2d2a42;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #3d3860;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #13111e;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #7c6cf0;
+      background: #1a1633;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .drop-zone h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #c4c0e0;
+    }
+    .drop-zone p {
+      margin-top: 6px;
+      font-size: 0.82rem;
+      color: #6b6890;
+    }
+    .drop-zone .browse-btn {
+      display: inline-block;
+      margin-top: 14px;
+      background: #7c6cf0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      pointer-events: none;
+    }
+
+    /* Preview */
+    #preview-section {
+      display: none;
+      margin-top: 20px;
+    }
+    #preview-section.visible { display: block; }
+    .preview-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #13111e;
+      border: 1px solid #2d2a42;
+      border-radius: 10px;
+      padding: 14px;
+    }
+    #preview-img {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 8px;
+      image-rendering: pixelated;
+    }
+    .preview-meta { flex: 1; }
+    .preview-meta .filename {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #c4c0e0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+    .preview-meta .filesize {
+      font-size: 0.78rem;
+      color: #6b6890;
+      margin-top: 2px;
+    }
+    #clear-btn {
+      background: none;
+      border: 1px solid #3d3860;
+      border-radius: 6px;
+      color: #9894b8;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    #clear-btn:hover { border-color: #e05a6e; color: #e05a6e; }
+
+    /* Predict button */
+    #predict-btn {
+      display: block;
+      width: 100%;
+      margin-top: 16px;
+      background: linear-gradient(135deg, #7c6cf0, #5b8af5);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    #predict-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    #predict-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Loading */
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 24px 0;
+      color: #9894b8;
+      font-size: 0.9rem;
+    }
+    #loading.visible { display: block; }
+    .spinner {
+      display: inline-block;
+      width: 28px; height: 28px;
+      border: 3px solid #2d2a42;
+      border-top-color: #7c6cf0;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result */
+    #result-section {
+      display: none;
+      margin-top: 20px;
+    }
+    #result-section.visible { display: block; }
+
+    .result-main {
+      background: linear-gradient(135deg, #1e1b30, #1a1a2e);
+      border: 1px solid #3d3860;
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+    }
+    .result-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b6890;
+      font-weight: 600;
+    }
+    .result-digit {
+      font-size: 5rem;
+      font-weight: 800;
+      line-height: 1;
+      margin: 10px 0;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .result-confidence {
+      display: inline-block;
+      background: #13111e;
+      border: 1px solid #3d3860;
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 0.88rem;
+      color: #9894b8;
+    }
+    .result-confidence span { color: #a78bfa; font-weight: 700; }
+
+    /* Probability bars */
+    .prob-section {
+      margin-top: 20px;
+    }
+    .prob-section h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6b6890;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .prob-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+    .prob-label {
+      width: 18px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #c4c0e0;
+      text-align: right;
+    }
+    .prob-bar-track {
+      flex: 1;
+      height: 8px;
+      background: #13111e;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: #4a3f9e;
+      transition: width 0.4s ease;
+    }
+    .prob-bar-fill.top { background: linear-gradient(90deg, #7c6cf0, #5b8af5); }
+    .prob-value {
+      width: 44px;
+      font-size: 0.78rem;
+      color: #6b6890;
+      text-align: right;
+    }
+
+    /* Error */
+    #error-box {
+      display: none;
+      margin-top: 16px;
+      background: #1f1218;
+      border: 1px solid #5c2233;
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #f08080;
+      font-size: 0.88rem;
+    }
+    #error-box.visible { display: block; }
+
+    /* Footer */
+    footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: #4a4870;
+    }
+    footer a { color: #7c6cf0; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏙️ SVHN Digit Recognizer</h1>
+  <p>Upload a photo of a digit — the CNN will predict what number it sees</p>
+  <span class="badge">CNN Model · ~90% Accuracy · SVHN Dataset</span>
+</header>
+
+<div class="card">
+
+  <!-- Drop zone -->
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept="image/*"/>
+    <span class="drop-icon">📷</span>
+    <h3>Drop an image here</h3>
+    <p>JPG, PNG, or WEBP · any image containing a single digit</p>
+    <span class="browse-btn">Browse files</span>
+  </div>
+
+  <!-- Preview -->
+  <div id="preview-section">
+    <div class="preview-row">
+      <img id="preview-img" src="" alt="Preview"/>
+      <div class="preview-meta">
+        <div class="filename" id="preview-name"></div>
+        <div class="filesize" id="preview-size"></div>
+      </div>
+      <button id="clear-btn" onclick="clearImage()">✕ Clear</button>
+    </div>
+  </div>
+
+  <!-- Predict button -->
+  <button id="predict-btn" disabled onclick="predict()">Predict Digit</button>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Running CNN inference…</div>
+  </div>
+
+  <!-- Error -->
+  <div id="error-box"></div>
+
+  <!-- Result -->
+  <div id="result-section">
+    <div class="result-main">
+      <div class="result-label">Predicted digit</div>
+      <div class="result-digit" id="result-digit">—</div>
+      <div class="result-confidence">Confidence: <span id="result-conf">—</span></div>
+    </div>
+
+    <div class="prob-section">
+      <h4>All class probabilities</h4>
+      <div id="prob-bars"></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Built by <a href="https://github.com/YOUR_USERNAME/svhn-digit-recognition" target="_blank">Your Name</a>
+  · MIT Applied Data Science · Model trained on SVHN dataset
+</footer>
+
+<script>
+  let selectedFile = null;
+
+  // ─── Drop zone ────────────────────────────────────────────────────────
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) handleFile(file);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  // ─── Handle selected file ─────────────────────────────────────────────
+  function handleFile(file) {
+    selectedFile = file;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('preview-img').src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    document.getElementById('preview-name').textContent = file.name;
+    document.getElementById('preview-size').textContent = formatBytes(file.size);
+    document.getElementById('preview-section').classList.add('visible');
+    document.getElementById('predict-btn').disabled = false;
+
+    // Reset result
+    hideResults();
+  }
+
+  function clearImage() {
+    selectedFile = null;
+    fileInput.value = '';
+    document.getElementById('preview-section').classList.remove('visible');
+    document.getElementById('predict-btn').disabled = true;
+    hideResults();
+  }
+
+  function hideResults() {
+    document.getElementById('result-section').classList.remove('visible');
+    document.getElementById('error-box').classList.remove('visible');
+  }
+
+  // ─── Predict ──────────────────────────────────────────────────────────
+  async function predict() {
+    if (!selectedFile) return;
+
+    // Show loading
+    document.getElementById('predict-btn').disabled = true;
+    document.getElementById('loading').classList.add('visible');
+    hideResults();
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    try {
+      const response = await fetch('/predict', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      document.getElementById('loading').classList.remove('visible');
+
+      if (!response.ok || data.error) {
+        showError(data.error || 'Prediction failed. Please try another image.');
+        return;
+      }
+
+      showResult(data);
+
+    } catch (err) {
+      document.getElementById('loading').classList.remove('visible');
+      showError('Could not connect to the server. Is the app running?');
+    } finally {
+      document.getElementById('predict-btn').disabled = false;
+    }
+  }
+
+  // ─── Show result ──────────────────────────────────────────────────────
+  function showResult(data) {
+    document.getElementById('result-digit').textContent = data.predicted_digit;
+    document.getElementById('result-conf').textContent = data.confidence_label;
+
+    // Render probability bars for all 10 classes
+    const barsContainer = document.getElementById('prob-bars');
+    barsContainer.innerHTML = '';
+
+    const probs = data.all_probabilities;
+    const maxProb = Math.max(...Object.values(probs));
+
+    for (let i = 0; i <= 9; i++) {
+      const val = probs[String(i)] || 0;
+      const isTop = i === data.predicted_digit;
+
+      const row = document.createElement('div');
+      row.className = 'prob-row';
+      row.innerHTML = `
+        <div class="prob-label">${i}</div>
+        <div class="prob-bar-track">
+          <div class="prob-bar-fill ${isTop ? 'top' : ''}"
+               style="width: ${(val / 100) * 100}%"></div>
+        </div>
+        <div class="prob-value">${val.toFixed(1)}%</div>
+      `;
+      barsContainer.appendChild(row);
+    }
+
+    document.getElementById('result-section').classList.add('visible');
+
+    // Animate bars in
+    setTimeout(() => {
+      document.querySelectorAll('.prob-bar-fill').forEach(bar => {
+        bar.style.width = bar.style.width;
+      });
+    }, 50);
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.textContent = '⚠️ ' + msg;
+    box.classList.add('visible');
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+</script>
+
+</body>
+</html>
