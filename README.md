@@ -52,7 +52,7 @@ svhn-digit-recognition/
 
 ```bash
 git clone https://github.com/tanwar98anupama/svhn-digit-recognition
-cd svhn-digit-recognition/app
+cd svhn-digit-recognition
 
 pip install -r requirements.txt
 
