@@ -8,8 +8,7 @@
 
 > Recognizing digits from real-world street photos using deep learning — the same problem Google solves to power Maps address recognition. Trained on the SVHN dataset, deployed as a live web app on AWS EC2.
 
-🔗 Live Demo: Coming soon — deploying on AWS EC2 ← upload any digit image
-
+🔗 **[Live Demo](http://54.219.84.246:5000/)** — Try your own cropped single-digit images live on the cloud!
 ---
 
 ## 📊 Results
